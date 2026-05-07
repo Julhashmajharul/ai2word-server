@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI2Word - Professional Markdown to Word Converter</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Marked.js -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- MathJax v2 with automatic line breaking -->
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+            tex2jax: {
+                inlineMath: [['$','$'], ['\\(','\\)']],
+                displayMath: [['$$','$$'], ['\\[','\\]']]
+            },
+            // Forces MathJax to use the page font for \text{} and preserves Bengali ligatures
+            "HTML-CSS": {
+                mtextFontInherit: true,
+                undefinedFamily: "'Kalpurush', 'Siyam Rupali', sans-serif",
+                linebreaks: { automatic: true, width: "container" }
+            },
+            CommonHTML: {
+                mtextFontInherit: true,
+                linebreaks: { automatic: true, width: "container" }
+            },
+            SVG: {
+                mtextFontInherit: true,
+                linebreaks: { automatic: true, width: "container" }
+            }
+        });
+    </script>
+    <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js?config=TeX-AMS_CHTML"></script>
+
+    <style>
+        /* Avro (OmicronLab) Bangla Web Fonts */
+        @import url('https://fonts.maateen.me/kalpurush/font.css');
+        @import url('https://fonts.maateen.me/solaiman-lipi/font.css');
+        @import url('https://fonts.maateen.me/siyam-rupali/font.css');
+
+        /* Bangla font alias — uses Kalpurush from maateen.me (OmicronLab URL is CORS-blocked) */
+        @font-face {
+            font-family: 'Bangla';
+            src: local('Kalpurush'),
+                url('https://fonts.maateen.me/kalpurush/Kalpurush.woff2') format('woff2'),
+                url('https://fonts.maateen.me/kalpurush/Kalpurush.woff') format('woff');
+        }
+
+        @font-face {
+            font-family: 'bangla';
+            src: local('Kalpurush'),
+                url('https://fonts.maateen.me/kalpurush/Kalpurush.woff2') format('woff2'),
+                url('https://fonts.maateen.me/kalpurush/Kalpurush.woff') format('woff');
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #ffffff;
+            border-left: 1px solid #000;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #000000;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #333333;
+        }
+
+        /* Preview pane canvas — Google Docs-like light gray background */
+        #preview-container {
+            background-color: #f3f4f6;
+            overflow-y: auto;
+            height: 100%;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            border: none;
+        }
+
+        /* Modern scrollbar for the preview pane */
+        #preview-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #preview-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        #preview-container::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+
+        #preview-container::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        /* Dynamic Variables for Customization (Times New Roman + bangla Default) */
+        :root {
+            --doc-font: 'Times New Roman', 'bangla', sans-serif;
+            --doc-font-size: 12pt;
+            --doc-color: #000000;
+            --doc-line-height: 1;
+            --selected-math-text-font: 'Kalpurush', sans-serif;
+            /* Synced dynamically via JS */
+
+            --heading-font: 'Times New Roman', 'bangla', sans-serif;
+            --heading-color: #003366;
+            --h1-size: 24pt;
+            --h2-size: 16pt;
+            --h3-size: 13pt;
+
+            /* Updated Default Margins based on MS Word Page Setup */
+            --page-mt: 0.5in;
+            --page-mb: 0.5in;
+            --page-ml: 0.5in;
+            --page-mr: 0.5in;
+
+            --page-border-width: 0px;
+            --page-border-style: none;
+            --page-border-color: #000000;
+
+            --math-align: center;
+        }
+
+        /* Preview Page Styles — floating A4 paper effect */
+        .preview-content {
+            box-sizing: border-box;
+            font-family: var(--doc-font);
+            color: var(--doc-color);
+            line-height: var(--doc-line-height);
+            font-size: var(--doc-font-size);
+            background-color: #ffffff;
+            width: 100%;
+            max-width: 210mm;
+            min-height: 297mm;
+            height: max-content;
+            padding-top: var(--page-mt);
+            padding-bottom: var(--page-mb);
+            padding-left: var(--page-ml);
+            padding-right: var(--page-mr);
+            border: var(--page-border-width) var(--page-border-style) var(--page-border-color);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
+            border-radius: 2px;
+            overflow: visible;
+        }
+
+        /* Display math block alignment — controlled by --math-align CSS variable */
+        .MathJax_Display {
+            text-align: var(--math-align) !important;
+            margin: 1rem 0 !important;
+            max-width: 100% !important;
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+        }
+
+        /* MathJax v2 Bengali ligature fix.
+           With mtextFontInherit:true, MathJax inherits the page font for \text{},
+           but we still need to force ligatures and correct font-variant. */
+        .MathJax .mtext,
+        .MathJax .mtext span,
+        .MathJax_CHTML .mjx-mtext,
+        .MathJax_CHTML .mjx-mtext * {
+            font-family: var(--selected-math-text-font) !important;
+            font-variant-ligatures: normal !important;
+            font-feature-settings: "liga" 1, "clig" 1 !important;
+            text-rendering: optimizeLegibility !important;
+            letter-spacing: normal !important;
+        }
+
+        /* Heading Styles */
+        .textbook-h1 {
+            font-family: var(--heading-font);
+            font-size: var(--h1-size);
+            font-weight: bold;
+            color: var(--heading-color);
+            margin-top: 24pt;
+            margin-bottom: 12pt;
+        }
+
+        .textbook-h2 {
+            font-family: var(--heading-font);
+            font-size: var(--h2-size);
+            font-weight: bold;
+            color: var(--heading-color);
+            margin-top: 20pt;
+            margin-bottom: 10pt;
+        }
+
+        .textbook-h3 {
+            font-family: var(--heading-font);
+            font-size: var(--h3-size);
+            font-weight: bold;
+            color: var(--heading-color);
+            margin-top: 16pt;
+            margin-bottom: 8pt;
+        }
+
+        .textbook-list {
+            list-style-type: disc;
+            padding-left: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Modals */
+        #settings-modal,
+        #loading-modal,
+        #custom-alert {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 50;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(2px);
+        }
+
+        /* Print Styles for Perfect PDF Export */
+        @media print {
+
+            /* 1. Force exact hardware margins */
+            @page {
+                size: A4 portrait;
+                margin: 25.4mm;
+                /* Strict 1-inch margins */
+            }
+
+            /* 2. Break ALL Flexbox/Grid layouts globally so they don't constrain the print flow */
+            html,
+            body,
+            main,
+            div,
+            section,
+            article {
+                display: block !important;
+                position: static !important;
+                width: 100% !important;
+                height: auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow: visible !important;
+                float: none !important;
+                background: white !important;
+                max-width: none !important;
+                min-height: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+            }
+
+            /* 3. Hide ALL non-content UI elements by their exact selectors */
+            nav,
+            #landing-view,
+            #nav-landing-btns,
+            #nav-app-btns,
+            #settings-modal,
+            #loading-modal,
+            #custom-alert,
+            #auth-modal,
+            #markdown-editor,
+            #app-view>section:first-of-type,
+            #app-view>section:last-of-type>header,
+            #preview-container>.preview-content~*,
+            button,
+            textarea {
+                display: none !important;
+            }
+
+            /* 4. Ensure the preview content is visible and flows naturally */
+            #preview-content,
+            #preview-content * {
+                visibility: visible !important;
+            }
+
+            #preview-content {
+                display: block !important;
+                width: 100% !important;
+                max-width: none !important;
+                color: black !important;
+                border: none !important;
+                box-shadow: none !important;
+                background: white !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+
+            /* 5. Prevent awkward page breaks inside content blocks */
+            p,
+            li,
+            blockquote,
+            .MathJax_Display,
+            mjx-container {
+                page-break-inside: avoid !important;
+            }
+
+            /* 6. Ensure math fits in print */
+            mjx-container[display="true"] {
+                overflow-x: visible !important;
+                text-align: center !important;
+            }
+
+            mjx-container svg,
+            mjx-container mjx-math {
+                max-width: 100% !important;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-white flex flex-col h-screen text-black font-sans">
+
+    <!-- Top Navigation -->
+    <nav
+        class="bg-white text-black px-6 py-4 flex justify-between items-center shrink-0 relative z-40 border-b-4 border-black">
+        <div>
+            <!-- Clicking Logo goes back to Home -->
+            <h1 onclick="showHome()"
+                class="text-3xl font-black uppercase tracking-widest cursor-pointer hover:underline">
+                [ AI2WORD ]
+            </h1>
+        </div>
+
+        <!-- Navbar Buttons for Landing Page -->
+        <div id="nav-landing-btns"
+            class="flex items-center gap-6 text-sm md:text-base font-bold uppercase tracking-wider">
+            <button onclick="showAuthModal('login')" class="hover:underline">Log in</button>
+            <button onclick="showAuthModal('signup')"
+                class="bg-black text-white hover:bg-white hover:text-black hover:border-black border-2 border-black px-6 py-2 transition-colors">
+                Sign up
+            </button>
+        </div>
+
+        <!-- Navbar Buttons for Editor App (Hidden initially) -->
+        <div id="nav-app-btns" class="hidden gap-4 text-xs md:text-sm uppercase font-bold tracking-wider">
+            <button onclick="toggleSettings(true)"
+                class="bg-white text-black border-2 border-black hover:bg-black hover:text-white px-4 py-2 flex items-center gap-2 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-y-1 hover:translate-x-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" />
+                    <path
+                        d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
+                </svg>
+                <span class="hidden md:inline">Settings</span>
+            </button>
+            <button onclick="exportAsPDF()"
+                class="bg-white text-black border-2 border-black hover:bg-black hover:text-white px-4 py-2 flex items-center gap-2 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-y-1 hover:translate-x-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+                <span class="hidden md:inline">Export PDF</span>
+            </button>
+            <button onclick="downloadRealWord()"
+                class="bg-black text-white border-2 border-black hover:bg-white hover:text-black px-4 py-2 flex items-center gap-2 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-y-1 hover:translate-x-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <path d="M9 15l2 3 4-6"></path>
+                </svg>
+                <span class="hidden md:inline">Export Word</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- LANDING PAGE VIEW -->
+    <div id="landing-view" class="flex-1 overflow-y-auto bg-white">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32 flex flex-col items-center text-center">
+            <h1 class="text-6xl md:text-7xl font-black text-black uppercase tracking-tighter mb-8 leading-tight">
+                Transform Markdown into <br> <span class="underline decoration-8 underline-offset-8">Professional
+                    Documents</span>
+            </h1>
+            <p class="text-xl md:text-2xl text-black max-w-3xl mb-12 font-medium">
+                The ultimate editor for teachers, students, and professionals. Write easily in Markdown, render complex
+                Math equations, and export directly to PDF or MS Word files with perfect Bangla font support.
+            </p>
+            <div class="flex gap-4">
+                <button onclick="showApp()"
+                    class="bg-black text-white text-xl px-10 py-5 font-black uppercase tracking-widest border-4 border-black hover:bg-white hover:text-black transition-colors shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-y-2 hover:translate-x-2">
+                    Start Writing
+                </button>
+            </div>
+
+            <!-- Features Section -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mt-32 w-full text-left">
+                <div class="bg-white p-8 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                    <div class="text-2xl font-black mb-4 uppercase border-b-4 border-black pb-2 inline-block">01.
+                        MathJax</div>
+                    <p class="text-black font-medium text-lg mt-2">Perfectly render complex mathematical equations and
+                        formulas in real-time.</p>
+                </div>
+                <div class="bg-white p-8 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                    <div class="text-2xl font-black mb-4 uppercase border-b-4 border-black pb-2 inline-block">02. Fonts
+                    </div>
+                    <p class="text-black font-medium text-lg mt-2">Built-in support for Kalpurush, SolaimanLipi, and
+                        Avro's default Bangla fonts.</p>
+                </div>
+                <div class="bg-white p-8 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                    <div class="text-2xl font-black mb-4 uppercase border-b-4 border-black pb-2 inline-block">03. Export
+                    </div>
+                    <p class="text-black font-medium text-lg mt-2">Export your formatted documents directly to
+                        print-ready PDF or editable MS Word files.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN EDITOR APP VIEW (Hidden initially) -->
+    <main id="app-view"
+        class="hidden flex-1 flex-col lg:flex-row w-full max-w-[1800px] mx-auto p-6 gap-6 overflow-hidden bg-white">
+
+        <!-- Editor Section -->
+        <section
+            class="flex-1 flex flex-col bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
+            <header class="bg-black px-6 py-4 border-b-4 border-black flex justify-between items-center">
+                <h2 class="font-black text-white uppercase tracking-widest text-lg">[ Input ]</h2>
+                <button onclick="clearEditor()"
+                    class="text-sm text-white font-bold uppercase tracking-widest hover:underline border border-white px-3 py-1">Clear</button>
+            </header>
+            <textarea id="markdown-editor" spellcheck="false"
+                class="flex-1 w-full p-8 resize-none outline-none font-mono text-black text-base bg-white"># Kinetic & Static Friction Formulas
+*AB-type friction formulas (for two blocks A and B in contact)*
+
+## Case 1: Block A on horizontal surface
+### Friction on A
+\[
+F = \mu N
+\]
+*Since \( N = m_A g \), substituting \(N\) gives:*
+\[
+F = \mu m_A g
+\]
+
+## Case 2: Contact on smooth surface
+*(External force \(F\) applied on Block A)*
+
+### Acceleration of system
+\[
+a = \frac{F}{m_A + m_B}
+\]
+
+### Contact force between A and B
+\[
+F_{AB} = \frac{m_B F}{m_A + m_B}
+\]
+
+## Case 3: Block A on Block B
+### Maximum friction
+\[
+F_{\text{max}} = \mu m_A g
+\]
+
+### Condition for no slipping
+> \[ f = m_A a \leq \mu m_A g \]
+</textarea>
+        </section>
+
+        <!-- Preview Section -->
+        <section class="flex-1 flex flex-col bg-gray-100 border border-gray-200 rounded-lg overflow-hidden">
+            <header class="bg-white px-6 py-3 border-b border-gray-200 flex justify-between items-center">
+                <h2 class="font-bold text-gray-600 uppercase tracking-widest text-sm">Preview</h2>
+            </header>
+            <div id="preview-container">
+                <div id="preview-content" class="preview-content"></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Word Customization Modal -->
+    <div id="settings-modal">
+        <div
+            class="bg-white w-full max-w-2xl border-4 border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] flex flex-col m-4">
+            <div class="p-6 border-b-4 border-black bg-black flex justify-between items-center">
+                <h2 class="text-2xl font-black text-white uppercase tracking-widest">Document Settings</h2>
+                <button onclick="toggleSettings(false)"
+                    class="text-white hover:text-gray-300 font-light text-4xl leading-none">&times;</button>
+            </div>
+
+            <div class="p-8 space-y-8 max-h-[70vh] overflow-y-auto bg-white">
+                <!-- Body Settings -->
+                <div>
+                    <h3
+                        class="font-black text-black mb-4 border-b-2 border-black pb-2 uppercase tracking-widest text-lg">
+                        Body Text</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-bold uppercase mb-2">Font Family</label>
+                            <select id="s-body-font"
+                                class="w-full border-2 border-black p-3 focus:ring-0 focus:outline-none focus:bg-gray-100 font-bold bg-white appearance-none">
+                                <option value="'Times New Roman', 'bangla', serif">Times New Roman + bangla (Default)
+                                </option>
+                                <option value="'Times New Roman', serif">Times New Roman</option>
+                                <option value="Arial, sans-serif">Arial</option>
+                                <option value="'Calibri', sans-serif">Calibri</option>
+                                <option value="'Georgia', serif">Georgia</option>
+                                <option disabled>──────────</option>
+                                <option value="'Kalpurush', sans-serif">Kalpurush (Bangla)</option>
+                                <option value="'SolaimanLipi', sans-serif">SolaimanLipi (Bangla)</option>
+                                <option value="'Siyam Rupali', sans-serif">Siyam Rupali (Bangla)</option>
+                                <option value="'bangla', sans-serif">bangla (Avro Default)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold uppercase mb-2">Font Size (pt)</label>
+                            <input type="number" id="s-body-size" value="12"
+                                class="w-full border-2 border-black p-3 focus:ring-0 focus:outline-none focus:bg-gray-100 font-bold">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold uppercase mb-2">Text Color</label>
+                            <input type="color" id="s-body-color" value="#000000"
+                                class="w-full h-12 border-2 border-black p-0 cursor-pointer">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold uppercase mb-2">Line Spacing</label>
+                            <input type="number" step="0.1" id="s-line-space" value="1"
+                                class="w-full border-2 border-black p-3 focus:ring-0 focus:outline-none focus:bg-gray-100 font-bold">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold uppercase mb-2">Space Before (pt)</label>
+                            <input type="number" step="1" id="s-space-before" value="0" min="0"
+                                class="w-full border-2 border-black p-3 focus:ring-0 focus:outline-none focus:bg-gray-100 font-bold">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold uppercase mb-2">Space After (pt)</label>
+                            <input type="number" step="1" id="s-space-after" value="0" min="0"
+                                class="w-full border-2 border-black p-3 focus:ring-0 focus:outline-none focus:bg-gray-100 font-bold">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Page Margins -->
+                <div>
+                    <h3
+                        class="font-black text-black mb-4 border-b-2 border-black pb-2 uppercase tracking-widest text-lg">
+                        Margins (in)</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-sm font-bold uppercase mb-2">Top</label>
+                            <input type="number" step="0.1" id="s-mt" value="0.5"
+                                class="w-full border-2 border-black p-3 text-center focus:ring-0 focus:outline-none focus:bg-gray-100 font-bold">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold uppercase mb-2">Bottom</label>
+                            <input type="number" step="0.1" id="s-mb" value="0.5"
+                                class="w-full border-2 border-black p-3 text-center focus:ring-0 focus:outline-none focus:bg-gray-100 font-bold">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold uppercase mb-2">Left</label>
+                            <input type="number" step="0.1" id="s-ml" value="0.5"
+                                class="w-full border-2 border-black p-3 text-center focus:ring-0 focus:outline-none focus:bg-gray-100 font-bold">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold uppercase mb-2">Right</label>
+                            <input type="number" step="0.1" id="s-mr" value="0.5"
+                                class="w-full border-2 border-black p-3 text-center focus:ring-0 focus:outline-none focus:bg-gray-100 font-bold">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Page Border -->
+                <div>
+                    <h3
+                        class="font-black text-black mb-4 border-b-2 border-black pb-2 uppercase tracking-widest text-lg">
+                        Page Border</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-bold uppercase mb-2">Style</label>
+                            <select id="s-border-style"
+                                class="w-full border-2 border-black p-3 focus:ring-0 focus:outline-none focus:bg-gray-100 font-bold appearance-none bg-white">
+                                <option value="none">None</option>
+                                <option value="solid">Solid</option>
+                                <option value="dashed">Dashed</option>
+                                <option value="dotted">Dotted</option>
+                                <option value="double">Double</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold uppercase mb-2">Width (px)</label>
+                            <input type="number" id="s-border-width" value="1" min="1" max="10"
+                                class="w-full border-2 border-black p-3 focus:ring-0 focus:outline-none focus:bg-gray-100 font-bold">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold uppercase mb-2">Color</label>
+                            <input type="color" id="s-border-color" value="#000000"
+                                class="w-full h-12 border-2 border-black p-0 cursor-pointer">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Horizontal Line -->
+                <div>
+                    <div class="flex items-center justify-between mb-4 border-b-2 border-black pb-2">
+                        <h3 class="font-black text-black uppercase tracking-widest text-lg">
+                            Horizontal Line</h3>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <span class="text-sm font-bold uppercase">Enable</span>
+                            <input type="checkbox" id="s-hr-enabled" checked
+                                class="w-5 h-5 border-2 border-black accent-black cursor-pointer">
+                        </label>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-sm font-bold uppercase mb-2">Width</label>
+                            <select id="s-hr-width"
+                                class="w-full border-2 border-black p-3 focus:ring-0 focus:outline-none focus:bg-gray-100 font-bold appearance-none bg-white">
+                                <option value="100%">100%</option>
+                                <option value="75%">75%</option>
+                                <option value="50%">50%</option>
+                                <option value="25%">25%</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold uppercase mb-2">Thickness (pt)</label>
+                            <input type="number" id="s-hr-height" value="1" min="1" max="10" step="0.5"
+                                class="w-full border-2 border-black p-3 focus:ring-0 focus:outline-none focus:bg-gray-100 font-bold">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold uppercase mb-2">Color</label>
+                            <input type="color" id="s-hr-color" value="#000000"
+                                class="w-full h-12 border-2 border-black p-0 cursor-pointer">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold uppercase mb-2">Align</label>
+                            <select id="s-hr-align"
+                                class="w-full border-2 border-black p-3 focus:ring-0 focus:outline-none focus:bg-gray-100 font-bold appearance-none bg-white">
+                                <option value="left">Left</option>
+                                <option value="center" selected>Center</option>
+                                <option value="right">Right</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Heading Style -->
+                <div>
+                    <h3
+                        class="font-black text-black mb-4 border-b-2 border-black pb-2 uppercase tracking-widest text-lg">
+                        Heading Style</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-bold uppercase mb-2">Header Color</label>
+                            <input type="color" id="s-heading-color" value="#003366"
+                                class="w-full h-12 border-2 border-black p-0 cursor-pointer">
+                        </div>
+                        <div class="flex items-end">
+                            <p class="text-xs text-gray-500 font-medium leading-relaxed">
+                                Headings are exported as bold plain text (no Word outline levels),
+                                eliminating the collapsible triangle in Word.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Auto Align '=' -->
+                <div>
+                    <div class="flex items-center justify-between mb-4 border-b-2 border-black pb-2">
+                        <h3 class="font-black text-black uppercase tracking-widest text-lg">
+                            Math Formatting</h3>
+                    </div>
+                    <label class="flex items-center gap-3 cursor-pointer mb-4">
+                        <input type="checkbox" id="auto-align-toggle" checked
+                            class="w-5 h-5 border-2 border-black accent-black cursor-pointer">
+                        <span class="font-bold text-sm uppercase">Auto Align '='</span>
+                        <span class="text-xs text-gray-500 font-medium ml-2">
+                            Automatically formats consecutive $= lines into aligned LaTeX blocks
+                        </span>
+                    </label>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                        <div>
+                            <label class="block text-sm font-bold uppercase mb-2">Math Alignment</label>
+                            <select id="s-math-align"
+                                class="w-full border-2 border-black p-3 focus:ring-0 focus:outline-none focus:bg-gray-100 font-bold appearance-none bg-white">
+                                <option value="center" selected>Center (Default)</option>
+                                <option value="left">Left (Textbook Style)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2-Column Layout -->
+                <div>
+                    <div class="flex items-center justify-between mb-4 border-b-2 border-black pb-2">
+                        <h3 class="font-black text-black uppercase tracking-widest text-lg">
+                            Layout
+                        </h3>
+                    </div>
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="s-2-column-mode"
+                            class="w-5 h-5 border-2 border-black accent-black cursor-pointer">
+                        <span class="font-bold text-sm uppercase">Optimize for 2-Column Layout</span>
+                        <span class="text-xs text-gray-500 font-medium ml-2">
+                            Auto-sets font 10.5pt, margins 0.3in, spacing 0pt, math left-aligned
+                        </span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="p-6 border-t-4 border-black bg-white flex justify-end gap-4">
+                <button onclick="toggleSettings(false)"
+                    class="px-6 py-3 text-black font-bold uppercase tracking-widest border-2 border-black hover:bg-black hover:text-white transition-colors">Cancel</button>
+                <button onclick="applySettings()"
+                    class="bg-black hover:bg-white hover:text-black text-white px-8 py-3 border-2 border-black font-bold uppercase tracking-widest transition-colors">Apply
+                    Styles</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Modal -->
+    <div id="loading-modal">
+        <div class="bg-white p-10 border-4 border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] text-center max-w-sm">
+            <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-black mx-auto mb-6"></div>
+            <h3 class="text-2xl font-black text-black uppercase tracking-widest">Processing</h3>
+            <p class="text-black font-bold mt-4">Connecting to server...</p>
+        </div>
+    </div>
+
+    <!-- Custom Alert/Confirm Modal -->
+    <div id="custom-alert">
+        <div
+            class="bg-white p-8 border-4 border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] max-w-md mx-4 text-center">
+            <div id="alert-icon" class="text-6xl font-black mb-6 text-black">!</div>
+            <h3 id="alert-title"
+                class="text-2xl font-black text-black uppercase tracking-widest mb-4 border-b-2 border-black inline-block pb-1">
+                Notice</h3>
+            <p id="alert-message" class="text-black font-medium mb-8 text-lg"></p>
+            <div class="flex justify-center gap-4">
+                <button id="alert-cancel-btn"
+                    class="px-6 py-3 text-black font-bold uppercase tracking-widest border-2 border-black hover:bg-black hover:text-white transition-colors">Cancel</button>
+                <button id="alert-ok-btn"
+                    class="bg-black hover:bg-white hover:text-black text-white px-8 py-3 border-2 border-black font-bold uppercase tracking-widest transition-colors">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auth Modal (Log in / Sign up) -->
+    <div id="auth-modal"
+        class="hidden fixed inset-0 bg-white/90 z-50 flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white p-8 border-4 border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] max-w-md w-full mx-4">
+            <div class="flex justify-between items-center mb-6 border-b-4 border-black pb-4">
+                <h2 id="auth-title" class="text-3xl font-black text-black uppercase tracking-widest">Sign Up</h2>
+                <button onclick="closeAuthModal()"
+                    class="text-black hover:text-gray-600 font-black text-4xl leading-none">&times;</button>
+            </div>
+            <form onsubmit="handleAuth(event)" class="space-y-6 text-left">
+                <div id="name-field">
+                    <label class="block text-sm font-bold uppercase mb-2">Full Name</label>
+                    <input type="text" id="auth-name" placeholder="John Doe"
+                        class="w-full border-2 border-black p-3 focus:ring-0 focus:outline-none focus:bg-gray-100 font-bold text-black">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold uppercase mb-2">Email Address</label>
+                    <input type="email" id="auth-email" required placeholder="hello@example.com"
+                        class="w-full border-2 border-black p-3 focus:ring-0 focus:outline-none focus:bg-gray-100 font-bold text-black">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold uppercase mb-2">Password</label>
+                    <input type="password" id="auth-password" required placeholder="••••••••"
+                        class="w-full border-2 border-black p-3 focus:ring-0 focus:outline-none focus:bg-gray-100 font-bold text-black">
+                </div>
+                <button type="submit" id="auth-submit-btn"
+                    class="w-full bg-black hover:bg-white hover:text-black text-white px-8 py-4 border-2 border-black font-black uppercase tracking-widest transition-colors mt-4 text-xl">
+                    Create Account
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const editor = document.getElementById('markdown-editor');
+        const previewContent = document.getElementById('preview-content');
+
+        // --- Auth Modal Functions ---
+        function showAuthModal(type) {
+            const modal = document.getElementById('auth-modal');
+            const title = document.getElementById('auth-title');
+            const nameField = document.getElementById('name-field');
+            const submitBtn = document.getElementById('auth-submit-btn');
+
+            if (type === 'login') {
+                title.innerText = 'Log In';
+                nameField.style.display = 'none';
+                document.getElementById('auth-name').removeAttribute('required');
+                submitBtn.innerText = 'Enter Dashboard';
+            } else {
+                title.innerText = 'Sign Up';
+                nameField.style.display = 'block';
+                document.getElementById('auth-name').setAttribute('required', 'true');
+                submitBtn.innerText = 'Create Account';
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeAuthModal() {
+            document.getElementById('auth-modal').classList.add('hidden');
+        }
+
+        function handleAuth(event) {
+            event.preventDefault(); // Prevent form from refreshing the page
+            closeAuthModal();
+            showApp(); // Enter the editor
+
+            // Show Success Notification
+            const isLogin = document.getElementById('auth-title').innerText === 'Log In';
+            setTimeout(() => {
+                showCustomAlert(
+                    isLogin ? "Welcome back! You have successfully logged in." : "Account created successfully! Welcome to AI2Word.",
+                    "Success",
+                    "✓"
+                );
+            }, 300);
+        }
+
+        // Navigation Functions
+        function showApp() {
+            document.getElementById('landing-view').classList.add('hidden');
+
+            const appView = document.getElementById('app-view');
+            appView.classList.remove('hidden');
+            appView.classList.add('flex');
+
+            document.getElementById('nav-landing-btns').classList.add('hidden');
+            document.getElementById('nav-landing-btns').classList.remove('flex');
+
+            document.getElementById('nav-app-btns').classList.remove('hidden');
+            document.getElementById('nav-app-btns').classList.add('flex');
+
+            updatePreview(); // Ensure math is rendered when app becomes visible
+        }
+
+        function showHome() {
+            const appView = document.getElementById('app-view');
+            appView.classList.add('hidden');
+            appView.classList.remove('flex');
+
+            document.getElementById('landing-view').classList.remove('hidden');
+
+            document.getElementById('nav-app-btns').classList.add('hidden');
+            document.getElementById('nav-app-btns').classList.remove('flex');
+
+            document.getElementById('nav-landing-btns').classList.remove('hidden');
+            document.getElementById('nav-landing-btns').classList.add('flex');
+        }
+
+        // Markdown Renderer Setup (Clean style)
+        const renderer = {
+            heading({ text, depth }) {
+                // In some marked versions `text` can be a tokens array — stringify it safely
+                const rawText = Array.isArray(text)
+                    ? text.map(t => t.text || t.raw || '').join('')
+                    : String(text || '');
+                const cleanText = rawText.replace(/^[✅◆🔹]\s*/, '').trim();
+                if (depth === 1) return `<h1 class="textbook-h1">${cleanText}</h1>`;
+                if (depth === 2) return `<h2 class="textbook-h2">${cleanText}</h2>`;
+                return `<h${depth} class="textbook-h3">${cleanText}</h${depth}>`;
+            },
+            list({ body, ordered }) {
+                if (!ordered) return `<ul class="textbook-list">${body}</ul>`;
+                return `<ol style="list-style-type: decimal; padding-left: 2rem; margin-bottom: 1rem;">${body}</ol>`;
+            },
+            hr() {
+                // Explicit hr renderer prevents marked from returning undefined
+                return '<hr style="border: none; border-top: 1px solid #000; margin: 1rem 0;">';
+            }
+        };
+        marked.use({ renderer });
+
+        let timeoutId;
+
+        // Pre-processor for long math equations
+        function processMathForOverflow(text) {
+            // Pattern to match display math blocks: $$...$$ or \[...\]
+            return text.replace(/(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\])/g, (match) => {
+                const isDoubleDollar = match.startsWith('$$');
+                const startDelim = isDoubleDollar ? '$$' : '\\[';
+                const endDelim = isDoubleDollar ? '$$' : '\\]';
+
+                let content = match.slice(startDelim.length, -endDelim.length).trim();
+
+                // If it contains multiple '=' signs and isn't already using an environment
+                // We also check for 'long' equations with at least one '='
+                const eqCount = (content.match(/=/g) || []).length;
+
+                if (eqCount >= 2 && !content.includes('\\begin{')) {
+                    const parts = content.split('=');
+                    // Wrap in aligned environment and align at '='
+                    // This forces breaks before each '=' for multi-step derivations
+                    let alignedContent = parts[0].trim() + ' &= ' +
+                        parts.slice(1).map(p => p.trim()).join(' \\\\ &= ');
+
+                    return `${startDelim}\\begin{aligned}${alignedContent}\\end{aligned}${endDelim}`;
+                }
+
+                return match;
+            });
+        }
+
+        // Auto Align '=' — reformats consecutive $= lines into \begin{aligned} blocks
+        function applyAutoAlign(text) {
+            const toggle = document.getElementById('auto-align-toggle');
+            if (!toggle || !toggle.checked) return text;
+
+            const lines = text.split('\n');
+            const processedLines = [];
+            let inBlock = false;
+            let blockLines = [];
+
+            function processBlock(bLines) {
+                if (bLines.length === 0) return [];
+                if (bLines.length === 1) return bLines;
+
+                // Pandoc যেন অংক চিনতে পারে তাই \n\n যোগ করা হলো
+                let aligned = ['\n\n$$', '\\begin{aligned}'];
+                for (let i = 0; i < bLines.length; i++) {
+                    let l = bLines[i];
+                    let match = l.match(/^(.*?)\$\s*=\s*(.*?)\$(.*)$/);
+
+                    if (match) {
+                        let prefix = match[1].trim();
+                        let math = match[2].trim();
+                        let suffix = match[3].replace(/\*\*/g, '').trim(); // স্টার রিমুভ করা হলো
+
+                        let row = '';
+                        if (prefix) row += `\\text{${prefix} } `;
+                        row += `&= ${math}`;
+                        if (suffix) row += ` \\quad \\text{ ${suffix}}`;
+
+                        if (i < bLines.length - 1) row += ' \\\\';
+                        aligned.push(row);
+                    } else {
+                        aligned.push(`\\text{${l}}` + (i < bLines.length - 1 ? ' \\\\' : ''));
+                    }
+                }
+                aligned.push('\\end{aligned}', '$$\n\n');
+                return aligned;
+            }
+
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i].trim();
+                if (line.includes('$=') || line.includes('$ =')) {
+                    inBlock = true;
+                    blockLines.push(line);
+                } else {
+                    if (inBlock) {
+                        processedLines.push(...processBlock(blockLines));
+                        blockLines = [];
+                        inBlock = false;
+                    }
+                    processedLines.push(lines[i]);
+                }
+            }
+            if (inBlock) {
+                processedLines.push(...processBlock(blockLines));
+            }
+
+            return processedLines.join('\n');
+        }
+
+        function updatePreview() {
+            let markdownText = editor.value;
+
+            // Apply Auto Align '=' before any other processing
+            markdownText = applyAutoAlign(markdownText);
+
+            // Apply pre-processing to handle long equations
+            markdownText = processMathForOverflow(markdownText);
+
+            const mathBlocks = [];
+
+            // Extract math blocks to prevent marked.js from messing with them
+            markdownText = markdownText.replace(/(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|\$[^$\n]+\$)/g, (match) => {
+                mathBlocks.push(match);
+                return `@@MATH_BLOCK_${mathBlocks.length - 1}@@`;
+            });
+
+            let htmlContent = marked.parse(markdownText);
+
+            // Put math blocks back
+            mathBlocks.forEach((math, index) => {
+                htmlContent = htmlContent.replace(`@@MATH_BLOCK_${index}@@`, math);
+            });
+
+            // Sanitise: strip any literal "undefined" that a renderer may have emitted
+            previewContent.innerHTML = htmlContent.replace(/undefined/g, '');
+
+            if (window.MathJax && MathJax.Hub) {
+                MathJax.Hub.Queue(["Typeset", MathJax.Hub, previewContent]);
+            }
+        }
+
+        editor.addEventListener('input', () => {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(updatePreview, 300);
+        });
+
+        // Custom Modal Function
+        function showCustomAlert(message, title = "Notice", icon = "!", isConfirm = false, onConfirm = null) {
+            document.getElementById('alert-message').innerHTML = message;
+            document.getElementById('alert-title').innerText = title;
+            document.getElementById('alert-icon').innerText = icon;
+
+            const modal = document.getElementById('custom-alert');
+            const okBtn = document.getElementById('alert-ok-btn');
+            const cancelBtn = document.getElementById('alert-cancel-btn');
+
+            modal.style.display = 'flex';
+
+            if (isConfirm) {
+                cancelBtn.style.display = 'inline-block';
+                okBtn.onclick = () => {
+                    modal.style.display = 'none';
+                    if (onConfirm) onConfirm();
+                };
+                cancelBtn.onclick = () => {
+                    modal.style.display = 'none';
+                };
+            } else {
+                cancelBtn.style.display = 'none';
+                okBtn.onclick = () => {
+                    modal.style.display = 'none';
+                };
+            }
+        }
+
+        function clearEditor() {
+            showCustomAlert('Are you sure you want to clear the editor?', 'Clear Editor', '?', true, () => {
+                editor.value = '';
+                updatePreview();
+                editor.focus();
+            });
+        }
+
+        function toggleSettings(show) {
+            document.getElementById('settings-modal').style.display = show ? 'flex' : 'none';
+        }
+
+        function applySettings() {
+            const root = document.documentElement;
+            const rawFont = document.getElementById('s-body-font').value;
+
+            // CSS Variable update
+            root.style.setProperty('--doc-font', rawFont);
+            root.style.setProperty('--selected-math-text-font', rawFont);
+
+            root.style.setProperty('--doc-font-size', document.getElementById('s-body-size').value + 'pt');
+            root.style.setProperty('--doc-color', document.getElementById('s-body-color').value);
+            root.style.setProperty('--doc-line-height', document.getElementById('s-line-space').value);
+
+            root.style.setProperty('--page-mt', document.getElementById('s-mt').value + 'in');
+            root.style.setProperty('--page-mb', document.getElementById('s-mb').value + 'in');
+            root.style.setProperty('--page-ml', document.getElementById('s-ml').value + 'in');
+            root.style.setProperty('--page-mr', document.getElementById('s-mr').value + 'in');
+
+            const bStyle = document.getElementById('s-border-style').value;
+            const bWidth = document.getElementById('s-border-width').value;
+            const bColor = document.getElementById('s-border-color').value;
+            root.style.setProperty('--page-border-style', bStyle);
+            root.style.setProperty('--page-border-width', bStyle === 'none' ? '0px' : bWidth + 'px');
+            root.style.setProperty('--page-border-color', bColor);
+
+            // Update preview styling
+            const previewEl = document.getElementById('preview-content');
+            if (previewEl) {
+                previewEl.style.border = bStyle === 'none'
+                    ? 'none'
+                    : `${bWidth}px ${bStyle} ${bColor}`;
+                previewEl.style.fontFamily = rawFont;
+            }
+
+            // --- Heading color: update CSS var and apply live to all headings ---
+            const headingColor = document.getElementById('s-heading-color').value;
+            root.style.setProperty('--heading-color', headingColor);
+            if (previewEl) {
+                previewEl.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(el => {
+                    el.style.color = headingColor;
+                });
+            }
+
+            // --- Math alignment: live preview + CSS var ---
+            const mathAlign = document.getElementById('s-math-align').value;
+            root.style.setProperty('--math-align', mathAlign);
+
+            toggleSettings(false);
+            updatePreview(); // Re-render to apply math fonts
+        }
+
+        // --- 2-Column Mode: auto-preset event listener ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const twoColCheckbox = document.getElementById('s-2-column-mode');
+            if (!twoColCheckbox) return;
+            twoColCheckbox.addEventListener('change', function () {
+                if (this.checked) {
+                    // Optimized 2-column presets
+                    document.getElementById('s-body-size').value    = '10.5';
+                    document.getElementById('s-ml').value           = '0.3';
+                    document.getElementById('s-mr').value           = '0.3';
+                    document.getElementById('s-mt').value           = '0.5';
+                    document.getElementById('s-mb').value           = '0.5';
+                    document.getElementById('s-space-before').value = '0';
+                    document.getElementById('s-space-after').value  = '0';
+                    // Set math alignment to left
+                    const mathAlignSel = document.getElementById('s-math-align');
+                    if (mathAlignSel) mathAlignSel.value = 'left';
+                } else {
+                    // Revert to standard presets
+                    document.getElementById('s-body-size').value    = '12';
+                    document.getElementById('s-ml').value           = '0.5';
+                    document.getElementById('s-mr').value           = '0.5';
+                    document.getElementById('s-mt').value           = '0.5';
+                    document.getElementById('s-mb').value           = '0.5';
+                    document.getElementById('s-space-before').value = '0';
+                    document.getElementById('s-space-after').value  = '0';
+                    // Revert math alignment to center
+                    const mathAlignSel = document.getElementById('s-math-align');
+                    if (mathAlignSel) mathAlignSel.value = 'center';
+                }
+            });
+        });
+
+        function exportAsPDF() {
+            const previewContainer = document.getElementById('preview-content');
+            if (!previewContainer || !previewContainer.innerHTML.trim()) {
+                showCustomAlert("No content to export. Please write something first.", "Empty Document", "!");
+                return;
+            }
+
+            try {
+                if (window.self !== window.top) {
+                    showCustomAlert("Security limitations in this preview prevent the PDF window from opening.<br><br>Once uploaded to <b>Netlify</b>, it will work perfectly!", "Preview Limitation", "i");
+                    return;
+                }
+            } catch (e) { /* cross-origin check failed, proceed anyway */ }
+
+            // Read live CSS variable values so the PDF matches the user's current settings
+            const rootStyle = getComputedStyle(document.documentElement);
+            const docFont = rootStyle.getPropertyValue('--doc-font').trim() || "'Times New Roman', 'bangla', sans-serif";
+            const docFontSize = rootStyle.getPropertyValue('--doc-font-size').trim() || '12pt';
+            const docColor = rootStyle.getPropertyValue('--doc-color').trim() || '#000000';
+            const docLineHeight = rootStyle.getPropertyValue('--doc-line-height').trim() || '1';
+            const headingFont = rootStyle.getPropertyValue('--heading-font').trim() || docFont;
+            const headingColor = rootStyle.getPropertyValue('--heading-color').trim() || '#003366';
+            const h1Size = rootStyle.getPropertyValue('--h1-size').trim() || '24pt';
+            const h2Size = rootStyle.getPropertyValue('--h2-size').trim() || '16pt';
+            const h3Size = rootStyle.getPropertyValue('--h3-size').trim() || '13pt';
+
+            // Grab the fully-rendered HTML (MathJax v2 CHTML is already baked in)
+            const contentHTML = previewContainer.innerHTML;
+
+            // 1. Create a hidden iframe — completely isolated from Tailwind/Flex layouts
+            const iframe = document.createElement('iframe');
+            iframe.style.position = 'fixed';
+            iframe.style.left = '-9999px';
+            iframe.style.top = '0';
+            iframe.style.width = '210mm';
+            iframe.style.height = '297mm';
+            document.body.appendChild(iframe);
+
+            // 2. Write clean document with strict print stylesheet
+            const iframeDoc = iframe.contentWindow.document;
+            iframeDoc.open();
+            iframeDoc.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>AI2Word Document<\/title>
+                    <!-- Bangla Web Fonts -->
+                    <link rel="stylesheet" href="https://fonts.maateen.me/kalpurush/font.css">
+                    <link rel="stylesheet" href="https://fonts.maateen.me/solaiman-lipi/font.css">
+                    <link rel="stylesheet" href="https://fonts.maateen.me/siyam-rupali/font.css">
+                    <!-- MathJax v2 CHTML styles (for already-rendered math output) -->
+                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/fonts/HTML-CSS/TeX/woff/MathJax_Main-Regular.woff">
+                    <style>
+                        @page {
+                            size: A4 portrait;
+                            margin: 25.4mm; /* Perfect 1-inch margins on all sides */
+                        }
+                        * {
+                            box-sizing: border-box;
+                        }
+                        body {
+                            font-family: ${docFont};
+                            color: ${docColor};
+                            font-size: ${docFontSize};
+                            line-height: ${docLineHeight};
+                            margin: 0;
+                            padding: 0;
+                            background: white;
+                        }
+                        /* Heading styles matching the preview */
+                        .textbook-h1 {
+                            font-family: ${headingFont};
+                            font-size: ${h1Size};
+                            font-weight: bold;
+                            color: ${headingColor};
+                            margin-top: 24pt;
+                            margin-bottom: 12pt;
+                        }
+                        .textbook-h2 {
+                            font-family: ${headingFont};
+                            font-size: ${h2Size};
+                            font-weight: bold;
+                            color: ${headingColor};
+                            margin-top: 20pt;
+                            margin-bottom: 10pt;
+                        }
+                        .textbook-h3 {
+                            font-family: ${headingFont};
+                            font-size: ${h3Size};
+                            font-weight: bold;
+                            color: ${headingColor};
+                            margin-top: 16pt;
+                            margin-bottom: 8pt;
+                        }
+                        .textbook-list {
+                            list-style-type: disc;
+                            padding-left: 2rem;
+                            margin-bottom: 1rem;
+                        }
+                        /* Display math block centering */
+                        .MathJax_Display {
+                            text-align: center !important;
+                            margin: 1rem 0 !important;
+                            max-width: 100% !important;
+                            overflow-x: auto !important;
+                            overflow-y: hidden !important;
+                        }
+                        /* Clean horizontal rules */
+                        hr {
+                            border: none;
+                            border-bottom: 1px solid black;
+                            margin: 15px 0;
+                        }
+                        /* Prevent awkward page breaks */
+                        p, li, blockquote, .MathJax_Display, mjx-container {
+                            page-break-inside: avoid;
+                        }
+                        /* Blockquote styling */
+                        blockquote {
+                            border-left: 3px solid #666;
+                            padding-left: 1rem;
+                            margin-left: 0;
+                            color: #333;
+                        }
+                    <\/style>
+                <\/head>
+                <body>
+                    ${contentHTML}
+                <\/body>
+                <\/html>
+            `);
+            iframeDoc.close();
+
+            // 3. Wait for fonts/styles to load, then trigger print
+            setTimeout(() => {
+                iframe.contentWindow.focus();
+                iframe.contentWindow.print();
+
+                // Clean up the iframe after printing is done or canceled
+                setTimeout(() => {
+                    if (iframe.parentNode) {
+                        document.body.removeChild(iframe);
+                    }
+                }, 3000);
+            }, 800); // 800ms to ensure fonts and MathJax CSS fully load
+        }
+
+        async function downloadRealWord() {
+            const markdownText = editor.value;
+            if (!markdownText.trim()) {
+                showCustomAlert("No text to export.", "Empty Document", "!");
+                return;
+            }
+
+            // Apply Auto Align '=' before any other processing
+            let processedMarkdown = applyAutoAlign(markdownText);
+
+            // Apply the same pre-processing for Word export
+            processedMarkdown = processMathForOverflow(processedMarkdown);
+
+            let pandocReadyText = processedMarkdown;
+            // Standardize math delimiters for Pandoc/Server
+            pandocReadyText = pandocReadyText.split('\\[').join('$$').split('\\]').join('$$').split('\\(').join('$').split('\\)').join('$');
+
+            // --- Read current customization settings from the UI inputs ---
+            const fontFamilyRaw = document.getElementById('s-body-font').value;
+            // Parse the CSS font stack into individual names, ignoring generic keywords.
+            //   Segment 0  → ascii/hAnsi font  (e.g. "Times New Roman")
+            //   Segment 1  → complex-script font (e.g. "bangla"), if present
+            const _fontParts = fontFamilyRaw
+                .split(',')
+                .map(f => f.trim().replace(/['"]/g, '').trim())
+                .filter(f => f && f !== 'serif' && f !== 'sans-serif');
+            const fontFamily = _fontParts[0] || 'Times New Roman'; // ascii / hAnsi
+            const csFont = _fontParts[1] || '';                 // complex-script (Bangla); empty = same as ascii
+            const fontSize = parseFloat(document.getElementById('s-body-size').value) || 12;
+            const marginTop = parseFloat(document.getElementById('s-mt').value) || 0.7;
+            const marginBottom = parseFloat(document.getElementById('s-mb').value) || 0.7;
+            const marginLeft = parseFloat(document.getElementById('s-ml').value) || 0.5;
+            const marginRight = parseFloat(document.getElementById('s-mr').value) || 0.5;
+
+            // --- Page Border settings ---
+            const borderStyle = document.getElementById('s-border-style').value;
+            const borderWidth = parseInt(document.getElementById('s-border-width').value) || 2;
+            const borderColor = document.getElementById('s-border-color').value;
+
+            // --- Heading color ---
+            const headerColor = document.getElementById('s-heading-color').value;
+
+            const modal = document.getElementById('loading-modal');
+            modal.style.display = 'flex';
+
+            try {
+                // const apiUrl = 'https://ai2word-server.onrender.com/convert';
+                const apiUrl = 'http://127.0.0.1:5000/convert';
+
+                // --- DEBUG: Log the full payload before sending ---
+                const payload = {
+                    markdown: pandocReadyText,
+                    settings: {
+                        font_family: fontFamily,
+                        cs_font: csFont,          // complex-script font (e.g. "bangla"); empty = same as ascii
+                        font_size_pt: fontSize,
+                        margin_top_in: marginTop,
+                        margin_bottom_in: marginBottom,
+                        margin_left_in: marginLeft,
+                        margin_right_in: marginRight,
+                        // Page border (sent to backend for OXML injection)
+                        border_style: borderStyle,
+                        border_width_px: borderWidth,
+                        border_color: borderColor,
+                        // Heading style
+                        header_color: headerColor,
+                        // Horizontal Line style
+                        hr_enabled: document.getElementById('s-hr-enabled').checked,
+                        hr_width: document.getElementById('s-hr-width').value,
+                        hr_height: parseFloat(document.getElementById('s-hr-height').value) || 1,
+                        hr_color: document.getElementById('s-hr-color').value,
+                        hr_align: document.getElementById('s-hr-align').value,
+                        // Math alignment
+                        math_align: document.getElementById('s-math-align').value,
+                        // Paragraph spacing
+                        space_before_pt: parseFloat(document.getElementById('s-space-before').value) || 0,
+                        space_after_pt:  parseFloat(document.getElementById('s-space-after').value)  || 0,
+                        // Column layout
+                        column_count: document.getElementById('s-2-column-mode').checked ? 2 : 1
+                    }
+                };
+                console.log("Sending payload:", JSON.stringify({
+                    settings: payload.settings,
+                    markdown_length: payload.markdown.length
+                }, null, 2));
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errText = await response.text();
+                    throw new Error(`Server Error: ${response.status}`);
+                }
+
+                const blob = await response.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = downloadUrl;
+                a.download = 'AI2Word_Document.docx';
+
+                document.body.appendChild(a);
+                a.click();
+
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(downloadUrl);
+                }, 100);
+
+            } catch (error) {
+                console.error("Download Error:", error);
+                showCustomAlert("Server Connection Failed.<br><br>Error: " + error.message, "Connection Error", "X");
+            } finally {
+                modal.style.display = 'none';
+            }
+        }
+
+        window.onload = updatePreview;
+    </script>
+</body>
+
+</html>
