@@ -1,0 +1,3 @@
+SINGLE_LINE_PLACEHOLDER
+
+### $\square$ Type-01

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI2Word — Professional Markdown to Word Converter</title>
+  <meta name="description" content="Transform Markdown into professional Word documents with perfect Bangla font support, MathJax equations, and real-time preview." />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- Bangla Web Fonts -->
+  <link rel="stylesheet" href="https://fonts.maateen.me/kalpurush/font.css" />
+  <link rel="stylesheet" href="https://fonts.maateen.me/solaiman-lipi/font.css" />
+  <link rel="stylesheet" href="https://fonts.maateen.me/siyam-rupali/font.css" />
+
+  <!-- MathJax v2 -->
+  <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        inlineMath: [['$','$'], ['\\(','\\)']],
+        displayMath: [['$$','$$'], ['\\[','\\]']]
+      },
+      "HTML-CSS": {
+        mtextFontInherit: true,
+        undefinedFamily: "'Kalpurush', 'Siyam Rupali', sans-serif",
+        linebreaks: { automatic: true, width: "container" }
+      },
+      CommonHTML: {
+        mtextFontInherit: true,
+        linebreaks: { automatic: true, width: "container" }
+      },
+      SVG: {
+        mtextFontInherit: true,
+        linebreaks: { automatic: true, width: "container" }
+      }
+    });
+  </script>
+  <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js?config=TeX-AMS_CHTML"></script>
+</head>
+<body class="bg-surface-950 text-white font-sans antialiased">
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+</html>

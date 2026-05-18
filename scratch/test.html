@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <script>
+        const renderer = {
+            heading(token) {
+                const parsed = this.parser.parseInline(token.tokens);
+                document.body.innerHTML += "<div>" + parsed + "</div>";
+                return `<h1>${parsed}</h1>`;
+            }
+        };
+        marked.use({ renderer });
+        console.log(marked.parse("### **Test**"));
+    </script>
+</body>
+</html>

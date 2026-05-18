@@ -1,0 +1,7 @@
+[0] First Paragraph | 'Brilliant Academy'
+[1] Body Text | 'Special Suggestion Answer Sheet'
+[2] Body Text | 'বিষয়: সাধারণ গণিত (সেট ও ফাংশন)'
+[3] Body Text | 'প্রস্তুতকারক: Shahriar Talim (Talim Sir)'
+[4] Heading 3 | ' Type-01 (80%) [অনুশীলনী ২.১ (১ ও ২)]'
+[5] First Paragraph | 'i. সমাধান:'
+[6] Body Text | 'দেওয়া আছে, = {x  : x^2 - 9 = 0}$'

@@ -1,0 +1,467 @@
+@import "tailwindcss";
+
+/* ================================================================
+   AI2WORD — Tailwind v4 Theme Configuration
+   ================================================================ */
+@theme {
+  /* Brand colors */
+  --color-brand-50:  #f0f4ff;
+  --color-brand-100: #dbe4ff;
+  --color-brand-200: #bac8ff;
+  --color-brand-300: #91a7ff;
+  --color-brand-400: #748ffc;
+  --color-brand-500: #5c7cfa;
+  --color-brand-600: #4c6ef5;
+  --color-brand-700: #4263eb;
+  --color-brand-800: #3b5bdb;
+  --color-brand-900: #364fc7;
+  --color-brand-950: #1e3a8a;
+
+  /* Surface colors (dark UI) */
+  --color-surface-50:  #f8fafc;
+  --color-surface-100: #f1f5f9;
+  --color-surface-200: #e2e8f0;
+  --color-surface-300: #cbd5e1;
+  --color-surface-400: #94a3b8;
+  --color-surface-500: #64748b;
+  --color-surface-600: #475569;
+  --color-surface-700: #334155;
+  --color-surface-800: #1e293b;
+  --color-surface-900: #0f172a;
+  --color-surface-950: #020617;
+
+  /* Fonts */
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Custom shadows */
+  --shadow-glow: 0 0 20px rgba(92, 124, 250, 0.3);
+  --shadow-glow-lg: 0 0 40px rgba(92, 124, 250, 0.2);
+
+  /* Animations */
+  --animate-fade-in: fadeIn 0.3s ease-out;
+  --animate-slide-up: slideUp 0.4s ease-out;
+  --animate-slide-down: slideDown 0.3s ease-out;
+  --animate-scale-in: scaleIn 0.2s ease-out;
+  --animate-pulse-soft: pulseSoft 2s ease-in-out infinite;
+  --animate-shimmer: shimmer 2s linear infinite;
+
+  @keyframes fadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  @keyframes slideUp {
+    0% { opacity: 0; transform: translateY(20px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideDown {
+    0% { opacity: 0; transform: translateY(-10px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes scaleIn {
+    0% { opacity: 0; transform: scale(0.95); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  @keyframes pulseSoft {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+}
+
+/* ================================================================
+   AI2WORD — Design System & Custom Styles
+   ================================================================ */
+
+/* Smooth scrolling globally */
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Selection color */
+::selection {
+  background-color: rgba(92, 124, 250, 0.3);
+  color: white;
+}
+
+/* ---------- Glass card effect ---------- */
+.glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+}
+
+.glass-card-hover {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+  transition: all 0.3s;
+}
+.glass-card-hover:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: var(--shadow-glow);
+}
+
+/* ---------- Button variants ---------- */
+.btn-primary {
+  background-color: var(--color-brand-600);
+  color: white;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  transition: all 0.2s;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+  cursor: pointer;
+  border: none;
+}
+.btn-primary:hover {
+  background-color: var(--color-brand-500);
+  box-shadow: var(--shadow-glow);
+}
+.btn-primary:active { transform: scale(0.98); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+.btn-secondary:active { transform: scale(0.98); }
+
+.btn-ghost {
+  color: var(--color-surface-400);
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+}
+.btn-ghost:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.btn-danger {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.btn-danger:hover {
+  background: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+/* ---------- Input styles ---------- */
+.input-field {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  color: white;
+  transition: all 0.2s;
+  font-size: 0.875rem;
+}
+.input-field::placeholder { color: var(--color-surface-500); }
+.input-field:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(92, 124, 250, 0.5);
+  border-color: rgba(92, 124, 250, 0.5);
+}
+
+.input-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-surface-400);
+  margin-bottom: 0.375rem;
+}
+
+.select-field {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  color: white;
+  appearance: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.875rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+.select-field:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(92, 124, 250, 0.5);
+  border-color: rgba(92, 124, 250, 0.5);
+}
+
+/* ---------- Badge styles ---------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.badge-success {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+.badge-warning {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+.badge-danger {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+.badge-info {
+  background: rgba(92, 124, 250, 0.2);
+  color: var(--color-brand-400);
+  border: 1px solid rgba(92, 124, 250, 0.2);
+}
+
+/* ---------- Divider ---------- */
+.divider {
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  margin: 1.5rem 0;
+}
+
+/* ================================================================
+   Preview Pane — Document rendering styles (white paper effect)
+   ================================================================ */
+
+/* Bangla font aliases */
+@font-face {
+  font-family: 'Bangla';
+  src: local('Kalpurush'),
+       url('https://fonts.maateen.me/kalpurush/Kalpurush.woff2') format('woff2'),
+       url('https://fonts.maateen.me/kalpurush/Kalpurush.woff') format('woff');
+}
+@font-face {
+  font-family: 'bangla';
+  src: local('Kalpurush'),
+       url('https://fonts.maateen.me/kalpurush/Kalpurush.woff2') format('woff2'),
+       url('https://fonts.maateen.me/kalpurush/Kalpurush.woff') format('woff');
+}
+@font-face {
+  font-family: 'DandaFix';
+  src: local('Kalpurush'),
+       url('https://fonts.maateen.me/kalpurush/Kalpurush.woff2') format('woff2'),
+       url('https://fonts.maateen.me/kalpurush/Kalpurush.woff') format('woff');
+  unicode-range: U+0964, U+0965;
+}
+
+/* Dynamic CSS variables for document customization */
+:root {
+  --doc-font: 'DandaFix', 'Times New Roman', 'bangla', sans-serif;
+  --doc-font-size: 12pt;
+  --doc-color: #000000;
+  --doc-line-height: 1;
+  --selected-math-text-font: 'Kalpurush', sans-serif;
+
+  --heading-font: 'Times New Roman', 'bangla', sans-serif;
+  --heading-color: #003366;
+  --h1-size: 24pt;
+  --h2-size: 16pt;
+  --h3-size: 13pt;
+
+  --page-mt: 0.5in;
+  --page-mb: 0.5in;
+  --page-ml: 0.5in;
+  --page-mr: 0.5in;
+
+  --page-border-width: 0px;
+  --page-border-style: none;
+  --page-border-color: #000000;
+
+  --math-align: center;
+}
+
+/* Preview container — Google Docs-like gray background */
+.preview-container {
+  background-color: #e8eaed;
+  overflow-y: auto;
+  height: 100%;
+  padding: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+/* Floating A4 paper */
+.preview-content {
+  box-sizing: border-box;
+  font-family: var(--doc-font);
+  color: var(--doc-color);
+  line-height: var(--doc-line-height);
+  font-size: var(--doc-font-size);
+  background-color: #ffffff;
+  width: 100%;
+  max-width: 210mm;
+  min-height: 297mm;
+  height: max-content;
+  padding-top: var(--page-mt);
+  padding-bottom: var(--page-mb);
+  padding-left: var(--page-ml);
+  padding-right: var(--page-mr);
+  border: var(--page-border-width) var(--page-border-style) var(--page-border-color);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
+  border-radius: 2px;
+  overflow: visible;
+}
+
+/* Heading styles */
+.textbook-h1 {
+  font-family: var(--heading-font);
+  font-size: var(--h1-size);
+  font-weight: bold;
+  color: var(--heading-color);
+  margin-top: 24pt;
+  margin-bottom: 12pt;
+}
+.textbook-h2 {
+  font-family: var(--heading-font);
+  font-size: var(--h2-size);
+  font-weight: bold;
+  color: var(--heading-color);
+  margin-top: 20pt;
+  margin-bottom: 10pt;
+}
+.textbook-h3 {
+  font-family: var(--heading-font);
+  font-size: var(--h3-size);
+  font-weight: bold;
+  color: var(--heading-color);
+  margin-top: 16pt;
+  margin-bottom: 8pt;
+}
+.textbook-list {
+  list-style-type: disc;
+  padding-left: 2rem;
+  margin-bottom: 1rem;
+}
+
+/* Table styles inside preview */
+.preview-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  border: 1px solid var(--doc-color);
+  table-layout: fixed;
+}
+.preview-content th,
+.preview-content td {
+  border: 1px solid var(--doc-color);
+  padding: 8px 12px;
+  text-align: center;
+  vertical-align: middle;
+  word-break: normal;
+  overflow-wrap: break-word;
+  min-width: 80px;
+}
+.preview-content th { font-weight: bold; }
+
+/* MathJax display alignment */
+.MathJax_Display {
+  text-align: var(--math-align) !important;
+  margin: 1rem 0 !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+}
+.MathJax_Display .mjx-chtml[display="true"],
+.MathJax_Display .MathJax {
+  display: inline-block !important;
+  text-align: var(--math-align) !important;
+}
+
+/* MathJax Bengali ligature fix */
+.MathJax .mtext,
+.MathJax .mtext span,
+.MathJax_CHTML .mjx-mtext,
+.MathJax_CHTML .mjx-mtext * {
+  font-family: var(--selected-math-text-font) !important;
+  font-variant-ligatures: normal !important;
+  font-feature-settings: "liga" 1, "clig" 1 !important;
+  text-rendering: optimizeLegibility !important;
+  letter-spacing: normal !important;
+}
+
+/* ================================================================
+   Custom Scrollbar — Dark theme
+   ================================================================ */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.25); }
+
+/* Preview container scrollbar (lighter) */
+.preview-container::-webkit-scrollbar-track { background: #e8eaed; border-radius: 4px; }
+.preview-container::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+.preview-container::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+
+/* Editor scrollbar */
+.editor-textarea::-webkit-scrollbar-track { background: #0f172a; }
+.editor-textarea::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
+
+/* ================================================================
+   Print Styles
+   ================================================================ */
+@media print {
+  @page { size: A4 portrait; margin: 25.4mm; }
+  html, body, main, div, section, article {
+    display: block !important; position: static !important;
+    width: 100% !important; height: auto !important;
+    margin: 0 !important; padding: 0 !important;
+    overflow: visible !important; float: none !important;
+    background: white !important; max-width: none !important;
+    min-height: 0 !important; border: none !important;
+    box-shadow: none !important;
+  }
+  nav, .no-print, button, textarea { display: none !important; }
+  .preview-content {
+    display: block !important; width: 100% !important;
+    max-width: none !important; color: black !important;
+    border: none !important; box-shadow: none !important;
+    background: white !important; padding: 0 !important;
+    margin: 0 !important;
+  }
+  p, li, blockquote, .MathJax_Display { page-break-inside: avoid !important; }
+}

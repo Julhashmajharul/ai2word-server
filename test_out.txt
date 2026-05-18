@@ -1,0 +1,7 @@
+PARA: Brilliant Academy
+PARA: Special Suggestion Answer Sheet
+PARA: বিষয়: সাধারণ গণিত (সেট ও ফাংশন)
+PARA: প্রস্তুতকারক: Shahriar Talim (Talim Sir)
+PARA:  Type-01 (80%) [অনুশীলনী ২.১ (১ ও ২)]
+PARA: i. সমাধান:
+PARA: দেওয়া আছে, 

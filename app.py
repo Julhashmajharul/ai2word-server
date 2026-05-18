@@ -66,7 +66,7 @@ def safe_apply_fonts_preserve_math(paragraph, ascii_font="Times New Roman", beng
         if not run.text.strip():
             continue
 
-        chunks = re.split(r'([\u0980-\u09FF]+)', run.text)
+        chunks = re.split(r'([\u0980-\u09FF\u0964\u0965]+)', run.text)
         parent = run._element.getparent()
         
         for chunk in chunks:
@@ -83,19 +83,22 @@ def safe_apply_fonts_preserve_math(paragraph, ascii_font="Times New Roman", beng
             if run.font.size: new_run.font.size = run.font.size
             if run.font.color and run.font.color.rgb: new_run.font.color.rgb = run.font.color.rgb
             
+            if re.search(r'[\u0980-\u09FF\u0964\u0965]', chunk):
+                new_run.font.name = bengali_font
+            else:
+                new_run.font.name = ascii_font
+            
             # Apply strict font definitions via OXML
             rPr = new_run._element.get_or_add_rPr()
             for rFonts in rPr.findall(qn('w:rFonts')):
                 rPr.remove(rFonts)
                 
             new_fonts = OxmlElement('w:rFonts')
-            if re.search(r'[\u0980-\u09FF]', chunk):
-                new_run.font.name = bengali_font
+            if re.search(r'[\u0980-\u09FF\u0964\u0965]', chunk):
                 new_fonts.set(qn('w:ascii'), bengali_font)
                 new_fonts.set(qn('w:hAnsi'), bengali_font)
                 new_fonts.set(qn('w:cs'), bengali_font)
             else:
-                new_run.font.name = ascii_font
                 new_fonts.set(qn('w:ascii'), ascii_font)
                 new_fonts.set(qn('w:hAnsi'), ascii_font)
                 new_fonts.set(qn('w:cs'), ascii_font)
@@ -113,37 +116,41 @@ def fix_math_bengali_fonts(doc, bengali_font):
     from docx.oxml.ns import qn
     import re
 
-    for paragraph in doc.paragraphs:
-        for m_r in paragraph._element.findall('.//' + qn('m:r')):
-            t_node = m_r.find(qn('m:t'))
-            if t_node is not None and t_node.text and re.search(r'[\u0980-\u09FF]', t_node.text):
+    # Search entire document body instead of just doc.paragraphs to catch math in tables/lists
+    for m_r in doc._element.body.findall('.//' + qn('m:r')):
+        t_node = m_r.find(qn('m:t'))
+        if t_node is not None and t_node.text and re.search(r'[\u0980-\u09FF\u0964\u0965]', t_node.text):
 
-                # m:rPr (Math Run Properties) হ্যান্ডলিং
-                m_rPr = m_r.find(qn('m:rPr'))
-                if m_rPr is None:
-                    m_rPr = OxmlElement('m:rPr')
-                    m_r.insert(0, m_rPr)
+            # m:rPr (Math Run Properties) হ্যান্ডলিং
+            m_rPr = m_r.find(qn('m:rPr'))
+            if m_rPr is None:
+                m_rPr = OxmlElement('m:rPr')
+                m_r.insert(0, m_rPr)
 
-                # যুক্তবর্ণ ঠিক রাখতে m:nor (Normal Text) যোগ করা
-                if m_rPr.find(qn('m:nor')) is None:
-                    m_rPr.append(OxmlElement('m:nor'))
+            # যুক্তবর্ণ ঠিক রাখতে m:nor (Normal Text) যোগ করা
+            if m_rPr.find(qn('m:nor')) is None:
+                m_rPr.append(OxmlElement('m:nor'))
 
-                # w:rPr (Word Run Properties) হ্যান্ডলিং
-                w_rPr = m_r.find(qn('w:rPr'))
-                if w_rPr is None:
-                    w_rPr = OxmlElement('w:rPr')
-                    m_r.insert(0, w_rPr)
+            # w:rPr (Word Run Properties) হ্যান্ডলিং
+            w_rPr = m_r.find(qn('w:rPr'))
+            if w_rPr is None:
+                w_rPr = OxmlElement('w:rPr')
+                m_r.insert(0, w_rPr)
 
-                # ফন্ট সেট করা
-                rFonts = OxmlElement('w:rFonts')
-                rFonts.set(qn('w:ascii'), bengali_font)
-                rFonts.set(qn('w:hAnsi'), bengali_font)
-                rFonts.set(qn('w:cs'), bengali_font)
+            # ফন্ট সেট করা
+            rFonts = OxmlElement('w:rFonts')
+            rFonts.set(qn('w:ascii'), bengali_font)
+            rFonts.set(qn('w:hAnsi'), bengali_font)
+            rFonts.set(qn('w:cs'), bengali_font)
 
-                for old_f in w_rPr.findall(qn('w:rFonts')):
-                    w_rPr.remove(old_f)
-                w_rPr.append(rFonts)
+            for old_f in w_rPr.findall(qn('w:rFonts')):
+                w_rPr.remove(old_f)
+            w_rPr.append(rFonts)
 
+
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.table import WD_ALIGN_VERTICAL, WD_TABLE_ALIGNMENT
+from docx.text.paragraph import Paragraph
 
 def set_math_alignment(doc, align_val):
     """Set OMML equation alignment in the Word document.
@@ -152,20 +159,55 @@ def set_math_alignment(doc, align_val):
     display-math alignment. Values: 'centerGroup' (default) or 'left'.
     """
     omml_align = "left" if align_val == "left" else "centerGroup"
+    p_align_val = "left" if align_val == "left" else "center"
 
-    for paragraph in doc.paragraphs:
-        for math_para in paragraph._element.findall('.//' + qn('m:oMathPara')):
-            pr = math_para.find(qn('m:oMathParaPr'))
-            if pr is None:
-                pr = OxmlElement('m:oMathParaPr')
-                math_para.insert(0, pr)
+    # 1. Handle Display Math (m:oMathPara)
+    # Search entire document body instead of just doc.paragraphs to catch math in tables/lists
+    for math_para in doc._element.body.findall('.//' + qn('m:oMathPara')):
+        pr = math_para.find(qn('m:oMathParaPr'))
+        if pr is None:
+            pr = OxmlElement('m:oMathParaPr')
+            math_para.insert(0, pr)
 
-            jc = pr.find(qn('m:jc'))
-            if jc is None:
-                jc = OxmlElement('m:jc')
-                pr.append(jc)
+        jc = pr.find(qn('m:jc'))
+        if jc is None:
+            jc = OxmlElement('m:jc')
+            pr.append(jc)
 
-            jc.set(qn('m:val'), omml_align)
+        jc.set(qn('m:val'), omml_align)
+
+        # Force the parent paragraph to also be left-aligned to ensure no centering inheritance
+        parent = math_para.getparent()
+        while parent is not None and parent.tag != qn('w:p'):
+            parent = parent.getparent()
+        if parent is not None:
+            p = Paragraph(parent, parent.getparent())
+            p.alignment = WD_ALIGN_PARAGRAPH.LEFT if align_val == "left" else WD_ALIGN_PARAGRAPH.CENTER
+
+        # Force internal equation arrays (\begin{aligned}) to align left
+        for eqArr in math_para.findall('.//' + qn('m:eqArr')):
+            eqArrPr = eqArr.find(qn('m:eqArrPr'))
+            if eqArrPr is None:
+                eqArrPr = OxmlElement('m:eqArrPr')
+                eqArr.insert(0, eqArrPr)
+            baseJc = eqArrPr.find(qn('m:baseJc'))
+            if baseJc is None:
+                baseJc = OxmlElement('m:baseJc')
+                eqArrPr.append(baseJc)
+            # baseJc only supports specific values, left/right/center/centerGroup. We use the mapped omml_align.
+            baseJc.set(qn('m:val'), omml_align)
+
+    # 2. Handle Inline Math (m:oMath)
+    # If a paragraph contains inline math and we want textbook style, force the paragraph to left-align.
+    # This catches equations that Pandoc didn't wrap in m:oMathPara (e.g. lines with text like "=> $...$")
+    if align_val == "left":
+        for math_inline in doc._element.body.findall('.//' + qn('m:oMath')):
+            parent = math_inline.getparent()
+            while parent is not None and parent.tag != qn('w:p'):
+                parent = parent.getparent()
+            if parent is not None:
+                p = Paragraph(parent, parent.getparent())
+                p.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
 
 def set_document_columns(section, count):
@@ -243,6 +285,30 @@ def _apply_page_borders(section, border_style: str, border_width_px: int, border
     # <w:pgBorders> must come after <w:pgMar> in sectPr – append at end
     sect_pr.append(pg_borders)
 
+def set_table_borders(table):
+    """Apply a 0.5pt solid black border to all cells in a table."""
+    tblPr = table._element.xpath('w:tblPr')
+    if not tblPr:
+        tblPr = OxmlElement('w:tblPr')
+        table._element.insert(0, tblPr)
+    else:
+        tblPr = tblPr[0]
+        
+    tblBorders = tblPr.xpath('w:tblBorders')
+    if not tblBorders:
+        tblBorders = OxmlElement('w:tblBorders')
+        tblPr.append(tblBorders)
+    else:
+        tblBorders = tblBorders[0]
+        tblBorders.clear()
+
+    for border_name in ['w:top', 'w:left', 'w:bottom', 'w:right', 'w:insideH', 'w:insideV']:
+        border = OxmlElement(border_name)
+        border.set(qn('w:val'), 'single')
+        border.set(qn('w:sz'), '4')
+        border.set(qn('w:space'), '0')
+        border.set(qn('w:color'), '000000')
+        tblBorders.append(border)
 
 
 def apply_docx_settings(docx_path: str, settings: dict):
@@ -362,9 +428,23 @@ def apply_docx_settings(docx_path: str, settings: dict):
 
     # All paragraphs inside every table cell
     for table in doc.tables:
+        set_table_borders(table)
+        table.alignment = WD_TABLE_ALIGNMENT.CENTER
         for row in table.rows:
             for cell in row.cells:
+                cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
                 for paragraph in cell.paragraphs:
+                    paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    
+                    # Handle soft line breaks inside table cells
+                    for run in paragraph.runs:
+                        if 'XYZZYBRXYZZY' in run.text:
+                            parts = run.text.split('XYZZYBRXYZZY')
+                            run.text = parts[0]
+                            for part in parts[1:]:
+                                run.add_break()
+                                run.add_text(part)
+
                     if 'SINGLE_LINE_PLACEHOLDER' in paragraph.text:
                         if hr_enabled:
                             paragraph.clear()
@@ -424,7 +504,24 @@ def apply_docx_settings(docx_path: str, settings: dict):
         heading_pt = _HEADING_SIZES.get(depth, _DEFAULT_HEADING_SIZE)
 
         # Convert to Normal → removes outline level / collapsible triangle
-        para.style = doc.styles["Normal"]
+        # WARNING: Changing style to Normal hides paragraphs containing <m:oMath> in some Word versions!
+        # para.style = doc.styles["Normal"]
+
+        # Instead, explicitly set the paragraph outline level to 9 (Body Text)
+        # to remove the collapsible dropdown triangle without changing the style.
+        pPr = para._element.get_or_add_pPr()
+        
+        # Remove the Heading style reference completely to avoid the collapsible triangle.
+        # This acts exactly like 'Clear Formatting' in MS Word.
+        pStyle = pPr.find(qn('w:pStyle'))
+        if pStyle is not None:
+            pPr.remove(pStyle)
+            
+        outlineLvl = pPr.find(qn('w:outlineLvl'))
+        if outlineLvl is None:
+            outlineLvl = OxmlElement('w:outlineLvl')
+            pPr.append(outlineLvl)
+        outlineLvl.set(qn('w:val'), '9')
 
         # Stamp every heading run — runs last so bold/color/size win
         # Font assignment was already done by rebuild_paragraph_with_fonts above.
@@ -466,10 +563,83 @@ def convert():
     markdown_text = data.get("markdown", "")
     settings = data.get("settings", {})
 
+    # Fix broken table rows caused by newlines around <br> tags
+    markdown_text = re.sub(r'(<br\s*/?>)\s*[\r\n]+', r'\1 ', markdown_text, flags=re.IGNORECASE)
+    markdown_text = re.sub(r'[\r\n]+\s*(<br\s*/?>)', r' \1', markdown_text, flags=re.IGNORECASE)
+    
+    # Pandoc ignores <br> inside tables, so we use a safe placeholder to replace later
+    markdown_text = re.sub(r'<br\s*/?>', 'XYZZYBRXYZZY', markdown_text, flags=re.IGNORECASE)
+
     # ম্যাজিক ফিক্স: $$ ব্লকের চারপাশে \n\n দেওয়া হচ্ছে — অংক সুরক্ষিত থাকবে
     markdown_text = re.sub(r'(\$\$[\s\S]*?\$\$)', r'\n\n\1\n\n', markdown_text)
 
-    markdown_text = re.sub(r'^[-_*]{3,}\s*$', 'SINGLE_LINE_PLACEHOLDER', markdown_text, flags=re.MULTILINE)
+    # ১. অংকের ভেতরের স্পেস ফিক্স 
+    markdown_text = re.sub(r'\$(.*?)\$', lambda m: '$' + m.group(1).strip() + '$', markdown_text)
+
+    # ম্যাজিক ফিক্স: $\square$ কে প্লেইন টেক্সট বক্সে রূপান্তর (Word-এ হেডিং হাইড হওয়া আটকাতে)
+    markdown_text = re.sub(r'\$\\+square\$', '☐', markdown_text)
+    markdown_text = re.sub(r'\$\\+box\$', '☐', markdown_text)
+    markdown_text = re.sub(r'\$\s*\\+square\s*\$', '☐', markdown_text)
+
+    # ২. দাঁড়ি (।) ফিক্স - সবচেয়ে নিরাপদ পদ্ধতি (Math block বাদে শুধু সাধারণ টেক্সটে কাজ করবে, টেবিল স্কিপ করবে)
+    lines = markdown_text.split('\n')
+    for idx, line in enumerate(lines):
+        trimmed = line.strip()
+        # যদি লাইনটি টেবিল রো হয়, তাহলে দাঁড়ি ফিক্স স্কিপ করবে
+        if trimmed.startswith('|') or (line.count('|') >= 2 and not trimmed.startswith('#') and not trimmed.startswith('>')):
+            continue
+            
+        parts = line.split('$')
+        for i in range(0, len(parts), 2): # জোড় ইনডেক্সগুলো হলো সাধারণ টেক্সট
+            # ক. বাংলা লেখার পর থাকা পাইপ (|) কে দাঁড়ি (।) বানাবে
+            parts[i] = re.sub(r'([\u0980-\u09FF]\s*)\|', r'\1।', parts[i])
+            # খ. | (২) বা | (৪) এরকম মার্কস এর আগের পাইপকে দাঁড়ি বানাবে
+            parts[i] = re.sub(r'\|\s*(?=\()', '। ', parts[i])
+        lines[idx] = '$'.join(parts)
+    markdown_text = '\n'.join(lines)
+
+    # ৩. উইন্ডোজের হিডেন ক্যারেক্টার রিমুভ
+    markdown_text = markdown_text.replace('\r', '')
+
+    # ৪. পারফেক্ট লাইন ব্রেক (টেবিল এবং অংক সুরক্ষিত রেখে)
+    math_blocks = []
+    def math_extract(m):
+        math_blocks.append(m.group(1))
+        return f"@@MATH_BLOCK_{len(math_blocks)-1}@@"
+    
+    # Extract ALL math blocks temporarily
+    markdown_text = re.sub(r'(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|\$[^$\n]+\$)', math_extract, markdown_text)
+    
+    lines = markdown_text.split('\n')
+    processed_lines = []
+    for i, line in enumerate(lines):
+        trimmed = line.strip()
+        
+        # Magic Fix: Un-indent lines manually padded with spaces (mirrors frontend fix)
+        # unless they are lists, quotes, or tables.
+        if line.lstrip() != line and not re.match(r'^\s*([\*\-\+]\s|\d+\.\s|>|\|)', line):
+            line = line.lstrip()
+            
+        is_table = trimmed.startswith('|') or ('|' in trimmed and not trimmed.startswith('#') and not trimmed.startswith('>'))
+        
+        next_trimmed = lines[i+1].strip() if i+1 < len(lines) else ''
+        next_is_table = next_trimmed.startswith('|') or ('|' in next_trimmed and not next_trimmed.startswith('#') and not next_trimmed.startswith('>'))
+        
+        processed_lines.append(line)
+        if i < len(lines) - 1:
+            if is_table and next_is_table:
+                processed_lines.append('\n')
+            else:
+                processed_lines.append('\n\n')
+                
+    markdown_text = "".join(processed_lines)
+    markdown_text = re.sub(r'\n{3,}', '\n\n', markdown_text)
+    
+    # Restore math blocks
+    for i, block in enumerate(math_blocks):
+        markdown_text = markdown_text.replace(f"@@MATH_BLOCK_{i}@@", block)
+
+    markdown_text = re.sub(r'^[-_*]{3,}[ \t]*$', 'SINGLE_LINE_PLACEHOLDER', markdown_text, flags=re.MULTILINE)
 
     with tempfile.TemporaryDirectory() as tmpdir:
         md_path = os.path.join(tmpdir, "input.md")
